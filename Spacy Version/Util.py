@@ -22,7 +22,7 @@ def find_roots(doc):
     list_roots = []
     for possible_subject in doc:
         if possible_subject.dep in (nsubj, nsubjpass,agent) and possible_subject.head.pos == VERB \
-                and (possible_subject.head.dep != relcl and possible_subject.head.dep != ccomp ):
+                and (possible_subject.head.dep != ccomp ):
 
             list_roots.append(possible_subject.head)
 
@@ -32,7 +32,7 @@ def find_verbs(doc):
     list_verbs = []
     for possible_verb in doc:
         if possible_verb.dep != root and possible_verb.pos == VERB and possible_verb.dep != amod \
-                and possible_verb.dep != relcl and possible_verb.dep != ccomp:
+                and possible_verb.dep != ccomp:
             list_verbs.append(possible_verb)
 
     return list_verbs

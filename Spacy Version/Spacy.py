@@ -3,15 +3,24 @@ from copy import copy
 
 import spacy
 from nltk import Tree
-
 from Util import to_nltk_tree, find_roots, get_tag_by_word, get_dep_by_word, get_subtree_of, find_objects, find_verbs, \
     find_subjects, find, findLefts, remove_duplicates
+import re
+
+
+#------------BEGIN-------------------------------
+sent = 'Smuggling into the ghetto was accomplished through permits to travel outside, arranged by Rappaport for a high price.'
+
+#Remove paranthesis and words in it
+regex = re.compile("[\(\[].*?[\)\]]")
+result = re.findall(regex, sent)
 
 omit_words = ['were']
 
-nlp = spacy.load('en_core_web_sm')
+for word in result:
+    omit_words.append(word)
 
-sent = 'Upon capture of the town, about two weeks later, German soldiers began kidnapping Jews for forced labor, and searching Jewish homes for valuables.'
+nlp = spacy.load('en_core_web_sm')
 
 for word in omit_words:
     sent = sent.replace(word,'')
