@@ -10,7 +10,7 @@ import re
 nlp = spacy.load('en_core_web_sm')
 
 #------------BEGIN-------------------------------
-sent = 'On the outbreak of World War II, around 2,500 Jews were residing in the town.'
+sent = 'Kolbuszowa is located about 150 kilometers (94 miles) east of Kraków. '
 
 #Remove paranthesis and words in it
 regex = re.compile("[\(\[].*?[\)\]]")
@@ -127,7 +127,7 @@ for root in list_roots:
                                     object = word
                                     break
 
-                            if list(find(doc1,root))[0].dep_ in ('prep','agent'):
+                            if list(find(doc1,root))[0].dep_ in ('prep','agent','prt'):
                                 triples.append([[subject], [str(root) +' ' + str(list(find(doc1,root))[0])], [object]])
                             else:
                                 for obj in list_objects:
