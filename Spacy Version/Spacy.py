@@ -10,7 +10,7 @@ import re
 nlp = spacy.load('en_core_web_sm')
 
 #------------BEGIN-------------------------------
-sent = 'Kolbuszowa is located about 150 kilometers (94 miles) east of Kraków. '
+sent = 'On the outbreak of World War II, around 2,500 Jews were residing in the town.'
 
 #Remove paranthesis and words in it
 regex = re.compile("[\(\[].*?[\)\]]")
@@ -43,6 +43,7 @@ print(sent)
 list_roots = find_roots(doc1)
 list_verbs = find_verbs(doc1)
 
+list_roots = remove_duplicates(list_roots)
 
 
 for verb in list_verbs:
