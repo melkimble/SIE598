@@ -1,3 +1,4 @@
+import sys
 from itertools import chain
 
 import nltk
@@ -114,10 +115,30 @@ def get_subtree_of(doc,w):
             return word.subtree
 
 def find_objects(doc,a):
+    #print(a)
     list_objects = []
     for possible_object in doc:
-        if possible_object.dep in (dobj,pobj) and possible_object.head.pos in (VERB, ADP) and possible_object.head  in a  and possible_object.head.orth_ not in ('in','In'):
+        #print(possible_object,possible_object.pos_)
+        if possible_object.dep == (pobj) and possible_object.head.pos == ADP  and possible_object.head.head  in a and possible_object.orth_ not in ('time','Time'):
+            list_objects.append([possible_object,possible_object.head.head])
+        if possible_object.dep == (dobj) and possible_object.head.pos == VERB  and possible_object.head  in a  and possible_object.head.orth_ not in ('in','In'):
             list_objects.append([possible_object,possible_object.head])
+        if possible_object.dep == (dobj) and possible_object.head.pos == VERB and possible_object.head.head.pos == VERB and possible_object.head.head.dep_ != 'xcomp'  and possible_object.head  in a  and possible_object.head.orth_ not in ('in','In'):
+            if list(possible_object.head.head.rights)[0].dep_ != 'dobj':
+                list_objects.append([possible_object,possible_object.head.head])
+
+
+    #cleanup objects
+    for obj in list_objects:
+        verb = obj[1]
+        for obj_ in list_objects:
+            if obj_[0] != None and obj_[1] == verb and obj_[0] != obj[0] and obj_[0].dep_ == 'pobj':
+                obj_[0] = None
+
+    for obj in list_objects:
+        if obj[0] == None:
+            list_objects.remove(obj)
+
     return list_objects
 
 
@@ -147,4 +168,44 @@ def remove_duplicates(triples_):
     except:
         return triples_
 
+def build_object(obj):
+    children=[]
+    try:
+        if(len(list(obj.lefts))>0):
+            children = list(obj.lefts)
+        elif (len(list(obj.rights))>0):
+            children = list(obj.rights)
 
+        children.append(obj)
+    except :
+        #print(str(sys.exc_info()))
+
+        children.append(obj)
+
+    for child in children:
+        if type(child) != type(object) and child != None and child.pos == DET:
+            children.remove(child)
+
+
+    return children
+
+
+
+def build_subject(subj):
+    children=[]
+
+    try:
+        if(len(list(subj.lefts))>0):
+            children = list(subj.lefts)
+        elif (len(list(subj.rights))>0):
+            children = list(subj.rights)
+        children.append(subj)
+
+    except :
+        children.append(subj)
+
+    for child in children:
+        if child != None and child.pos == DET:
+            children.remove(child)
+
+    return children
