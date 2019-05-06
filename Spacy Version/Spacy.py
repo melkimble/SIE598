@@ -32,10 +32,13 @@ sentences = ['Some Kolbuszowa Jews were sent from Rzeszów to the Jasionka labor
              'The Jewish community of Kolbuszowa was not reestablished after the war.',
              'Afterwards, thousands of peasants poured in to take property from the abandoned Jewish homes. ',
              'Only three Jews remained in the ghetto to run the cobbler`s cooperative, making suits and boots for the German Police. ',
-             'New decrees were issued and shootings became commonplace.']
+             'New decrees were issued and shootings became commonplace.',
+             'The other Kolbuszowa Jews in Rzeszów were deported to the Bełżec extermination camp.',
+             'After the executions, Ehaus announced that all Jews in the Kreis would be evacuated to Rzeszów by June 25-27. ',
+             'On April 28, 1942, the Gestapo arrested and shot more than 20 Jews according to a list prepared by a Ukrainian informant, who served in the police. ']
 
 
-sent = sentences[20]
+sent = sentences[23]
 
 #Remove paranthesis and words in it
 regex = re.compile("[\(\[].*?[\)\]]")
@@ -313,7 +316,7 @@ for root in list_roots:
 
                         for obj in list_objects:
                             if obj[0] != None:
-                                if obj[1] == root and obj[0].orth_ == object.orth_:
+                                if object != None and obj[1] == root and obj[0].orth_ == object.orth_:
                                     neg_words = [word for word in list(root.lefts) if word.dep_ == 'neg']
                                     if  len(neg_words) > 0:
                                         triples.append([[build_subject(subject)], [neg_words[0].orth_+ ' ' +str(root) + ' ' +  str(child_word)  ], build_object(object),build_metadata(object)])
