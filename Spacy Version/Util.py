@@ -1,6 +1,6 @@
 import sys
 from itertools import chain
-
+import re
 import nltk
 from nltk.corpus import wordnet as wn
 
@@ -151,7 +151,6 @@ def find_subjects(doc):
     return list_subject
 
 def find(doc,w):
-    list_subject = []
     for p in doc:
         if p == w:
             return p.rights
@@ -166,7 +165,49 @@ def remove_duplicates(triples_):
     try:
         return list(triples for triples,_ in itertools.groupby(triples_))
     except:
+        print (sys.exc_info())
         return triples_
+
+def form_triples(triples_):
+
+    triples_new = []
+    for item in triples_:
+        i=0
+        S=' '
+        P=' '
+        O=' '
+        M=' '
+
+        for inner_item in item: #SPO
+            i+=1
+            if inner_item != None:
+                for inner_inner_item in inner_item:
+                    if inner_inner_item != None and type(inner_inner_item) == list:
+                        for inner_inner_inner_item in inner_inner_item:
+                            if i==1:
+                                S +=' ' + str(inner_inner_inner_item)
+                            if i==2:
+                                P +=' ' +  str(inner_inner_inner_item)
+                            if i==3:
+                                O +=' ' +  str(inner_inner_inner_item)
+                            if i==4:
+                                O +=' ' +  str(inner_inner_inner_item)
+                    else:
+                        if i==1:
+                                S +=' ' +  str(inner_inner_item)
+                        if i==2:
+                                P +=' ' +  str(inner_inner_item)
+                        if i==3:
+                                O +=' ' +  str(inner_inner_item)
+                        if i==4:
+                                M += str(inner_inner_item)
+
+        triple_new = [re.sub(' +', ' ', S),re.sub(' +', ' ', P),re.sub(' +', ' ', O),re.sub(' +', ' ', M)]
+
+        triples_new.append(triple_new)
+
+
+    return [a for i, a in enumerate(triples_new) if not any(all(c in h for c in a) for h in triples_new[:i])]
 
 def build_object(obj):
     children=[]
@@ -178,18 +219,38 @@ def build_object(obj):
 
         children.append(obj)
     except :
-        #print(str(sys.exc_info()))
-
         children.append(obj)
 
     for child in children:
-        if type(child) != type(object) and child != None and child.pos == DET:
+        if type(child) != type(object) and child != None and child.pos in (DET,CCONJ):
             children.remove(child)
 
-
+   # print(children)
     return children
 
+def build_metadata(obj):
 
+    children=[]
+    try:
+        if (len(list(obj.subtree))>0):
+
+            if obj.head.dep_ not in ('conj','advcl'):
+                ([children.append(word) for word in list(obj.subtree)])
+
+            else:
+                [children.append(word) for word in list(obj.head.subtree) ]
+    except :
+        children.append(None)
+
+    for child in children:
+        if type(child) != type(object) and child != None  and child.pos  in (DET,PUNCT) :
+
+            children.remove(child)
+
+    if len(children) == 1:
+        children=[None]
+
+    return ' '.join([child.orth_ for child in children if child != None])
 
 def build_subject(subj):
     children=[]
@@ -199,13 +260,14 @@ def build_subject(subj):
             children = list(subj.lefts)
         elif (len(list(subj.rights))>0):
             children = list(subj.rights)
-        children.append(subj)
 
+        children.append(subj)
     except :
         children.append(subj)
 
     for child in children:
-        if child != None and child.pos == DET:
+        if type(child) != type(object) and child != None and child.pos in (DET,CCONJ):
             children.remove(child)
 
+   # print(children)
     return children

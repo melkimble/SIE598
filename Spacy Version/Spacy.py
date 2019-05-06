@@ -6,7 +6,7 @@ from nltk import Tree
 from spacy.symbols import VERB, NOUN, PRON
 
 from Util import to_nltk_tree, find_roots, get_tag_by_word, get_dep_by_word, get_subtree_of, find_objects, find_verbs, \
-    find_subjects, find, findLefts, remove_duplicates, build_object, build_subject
+    find_subjects, find, findLefts, remove_duplicates, build_object, build_subject, build_metadata, form_triples
 import re
 
 nlp = spacy.load('en_core_web_sm')
@@ -26,10 +26,16 @@ sentences = ['Some Kolbuszowa Jews were sent from Rzeszów to the Jasionka labor
              'In November another roundup occurred; this time 80 Jews were chosen for forced labor in Pustków.',
              'On June 13, Twardon gave the Jews only 48 hours to move into the ghetto, which was located in the poorest section of town, where 700 Jews and 90 Poles resided. ',
              'The arrested Jews were sent to Auschwitz. ',
-             'The Judenrat established a public kitchen, where many Jews received their only meal of the day. ']
+             'The Judenrat established a public kitchen, where many Jews received their only meal of the day. ',
+             'On June 28, 1942, Twardon went to Rzeszów and ordered a group of Jewish men to return to Kolbuszowa to dismantle the ghetto houses. ',
+             'The men were housed in the Bet Midrash, now called the “Kolbuszowa Labor Camp.” ',
+             'The Jewish community of Kolbuszowa was not reestablished after the war.',
+             'Afterwards, thousands of peasants poured in to take property from the abandoned Jewish homes. ',
+             'Only three Jews remained in the ghetto to run the cobbler`s cooperative, making suits and boots for the German Police. ',
+             'New decrees were issued and shootings became commonplace.']
 
 
-sent = sentences[14]
+sent = sentences[20]
 
 #Remove paranthesis and words in it
 regex = re.compile("[\(\[].*?[\)\]]")
@@ -80,11 +86,9 @@ list_subjects = find_subjects(doc1)
 #print('ROOTS',list_roots)
 
 #print('ROOTS',list_roots)
-
-
-print('OBJECTS',list_objects)
-print('SUBJECTS',list_subjects)
-print('VERBS',list_verbs)
+#print('OBJECTS',list_objects)
+#print('SUBJECTS',list_subjects)
+#print('VERBS',list_verbs)
 
 #Make Structure
 for root in list_roots:
@@ -117,35 +121,73 @@ for root in list_roots:
 
     #PREDICATES
     for verb in list_verbs:
-
         if len(list_roots) == 1 and  (verb.dep_ != verb.head.dep_ or verb == verb.head)\
-                or (len(list_roots) > 1 and  verb.dep_ != verb.head.dep_ ):
+                or (len(list_roots) > 1 and  (verb.dep_ != verb.head.dep_ or len([word for word in list(verb.children) if word.dep_ in ('nsubj','nsubjpass')]) > 0)):
 
             for child_word in list(find(doc1,verb)):
+
                 #object = ''
                 for item in list_objects:
                     if item[1] == child_word:
                         object = item[0]
 
                 if get_dep_by_word(doc1,verb) in ('xcomp'):
+
                     if get_dep_by_word(doc1,child_word) == 'xcomp' or get_dep_by_word(doc1,child_word) == 'conj' :
 
                         for item in list_objects:
                             if item[1] == child_word:
                                 object = item[0]
 
-                        triples.append([[build_subject(subject)], [str(root) + ' ' +  str(child_word)], [build_object(object)]])
+                        triples.append([[build_subject(subject)], [str(root) + ' ' +  str(child_word)], build_object(object),build_metadata(object)])
 
                         for item in list_objects:
                             if item[1] == verb:
                                 object = item[0]
 
-                        triples.append([[build_subject(subject)], [str(root) + ' ' +  str(verb)], [build_object(object)]])
+                        triples.append([[build_subject(subject)], [str(root) + ' ' +  str(verb)], build_object(object),build_metadata(object)])
+
+                if get_dep_by_word(doc1,verb) in ('ROOT') and len([word for word in findLefts(doc1,verb) if word.dep_ == 'nsubjpass'])>0 \
+                            and len([word for word in find(doc1,verb) if word.dep_ == 'advmod']) > 0:
+
+                    for word in list(verb.subtree):
+                        if word.dep_ == 'pobj':
+                            object = word
+                            break
+
+                    if object.head.dep_ == 'prep':
+                        triples.append([[build_subject(subject)], [str(root) + ' ' + str(list(find(doc1,verb))[0])+ ' ' + object.head.orth_], build_object(object),build_metadata(object)])
+                    else:
+                        triples.append([[build_subject(subject)], [str(root) + ' ' + str(list(find(doc1,verb))[0])], build_object(object),build_metadata(object)])
+
+                elif get_dep_by_word(doc1,verb) in ('ROOT') and len([word for word in findLefts(doc1,verb) if word.dep_ == 'nsubjpass'])>0 \
+                        and len([word for word in find(doc1,verb) if word.dep_ in ( 'advmod','prep','xcomp','conj')]) == 0:
+
+
+                    for item in list_objects:
+                        if item[1] == child_word:
+                            object = item[0]
+
+                    triples.append([[build_subject(subject)], [str(root)  ], build_object(object),build_metadata(object)])
+
+
+                elif get_dep_by_word(doc1,verb) =='conj' and get_dep_by_word(doc1,child_word) == 'dobj':
+                        object = None
+                        for item in list_objects:
+                            if item[1] == verb:
+                                object = item[0]
+
+                        triples.append([[build_subject(subject)], [str(verb)], build_object(object),build_metadata(object)])
+
+
+
 
                 else:
 
+
+
                     if get_dep_by_word(doc1,child_word) == 'conj' and child_word.head.dep_ not in ('conj','ROOT','advcl') :
-                        print(child_word)
+
                         object=None
 
                         for item in list_objects:
@@ -153,15 +195,16 @@ for root in list_roots:
                                 object = item[0]
 
                         if object == None:
-                            triples.append([[build_subject(subject)], [str(root)], [build_object(object)]])
+                            triples.append([[build_subject(subject)], [str(root)], build_object(object),build_metadata(object)])
 
                         for item in list_objects:
                             if item[1] == child_word:
                                 object = item[0]
 
-                        triples.append([[build_subject(subject)], [str(child_word)], [build_object(object)]])
+                        triples.append([[build_subject(subject)], [str(child_word)], build_object(object),build_metadata(object)])
 
                     elif get_dep_by_word(doc1,child_word) == 'conj' and child_word.head.dep_ not in ('conj','advcl') :
+
 
                         object=None
                         for item in list_objects:
@@ -169,13 +212,13 @@ for root in list_roots:
                                 object = item[0]
 
                         if object == None and len(list_objects)>0:
-                            triples.append([[build_subject(subject)], [str(root)], [build_object([obj[0] for obj in list_objects if obj[1] == child_word][0])]])
+                            triples.append([[build_subject(subject)], [str(root)], build_object([obj[0] for obj in list_objects if obj[1] == child_word][0]),build_metadata(object)])
 
                         for item in list_objects:
                             if item[1] == child_word:
                                 object = item[0]
 
-                        triples.append([[build_subject(subject)], [str(child_word)], [build_object(object)]])
+                        triples.append([[build_subject(subject)], [str(child_word)], build_object(object),build_metadata(object)])
 
                     elif get_dep_by_word(doc1,child_word) == 'conj' and child_word.head.dep_ == 'advcl' and child_word.head.pos == VERB:
 
@@ -183,17 +226,18 @@ for root in list_roots:
                         for item in list_objects:
                             if item[1] == root :
                                 object = item[0]
-                        triples.append([[build_subject(subject)], [str(child_word.head)], [build_object([obj[0] for obj in list_objects if obj[1] == child_word][0])]])
+                        triples.append([[build_subject(subject)], [str(child_word.head)], build_object([obj[0] for obj in list_objects if obj[1] == child_word][0]),build_metadata(object)])
 
                         for item in list_objects:
                             if item[1] == child_word:
                                 object = item[0]
 
-                        triples.append([[build_subject(subject)], [str(child_word)], [build_object(object)]])
+                        triples.append([[build_subject(subject)], [str(child_word)], build_object(object),build_metadata(object)])
 
 
                     else:
                         if len(list(find(doc1,root)))>0:
+                            object = None
                             #-----------------------------------RIGHT----------------------
                             for word in find(doc1,list(find(doc1,root))[0]):
                                 if word.dep_ == 'pobj':
@@ -201,11 +245,20 @@ for root in list_roots:
                                     break
 
                             if list(find(doc1,root))[0].dep_ in ('prep','agent','prt'):
-                                triples.append([[build_subject(subject)], [str(root) +' ' + str(list(find(doc1,root))[0])], [build_object(object)]])
+
+                                neg_words = [word for word in list(root.lefts) if word.dep_ == 'neg']
+                                if  len(neg_words) > 0:
+                                    triples.append([[build_subject(subject)], [neg_words[0].orth_ +' ' + str(root) +' ' + str(list(find(doc1,root))[0])], build_object(object),build_metadata(object)])
+                                else:
+                                    triples.append([[build_subject(subject)], [str(root) +' ' + str(list(find(doc1,root))[0])], build_object(object),build_metadata(object)])
+
                             else:
                                 for obj in list_objects:
-                                    if obj[1] == root and obj[0].orth_ == object.orth_:
-                                        triples.append([[build_subject(subject)], [str(root)], [build_object(object)]])
+
+                                    if object!= None and obj[1] == root and obj[0].orth_ == object.orth_:
+                                        triples.append([[build_subject(subject)], [str(root)], build_object(object),build_metadata(object)])
+                                    elif obj[1] == root: #newly added 5/5/2019
+                                        triples.append([[build_subject(subject)], [str(root)], build_object(obj[0]),build_metadata(obj[0])])
                             #-----------------------------------LEFT----------------------
                             if len(list(findLefts(doc1,root)))>0:
                                 for word in find(doc1,list(find(doc1,root))[0]):
@@ -214,11 +267,11 @@ for root in list_roots:
                                         break
                                 if len(triples) == 0:
                                     if list(findLefts(doc1,root))[0].dep_ in ('prep','agent'):
-                                        triples.append([[build_subject(subject)], [str(root) +' ' + str(list(findLefts(doc1,root))[0])], [object]])
+                                        triples.append([[build_subject(subject)], [str(root) +'' + str(list(findLefts(doc1,root))[0])], object,build_metadata(object)])
                                     else:
                                         for obj in list_objects:
-                                            if obj[1] == root and obj[0].orth_ == object:
-                                                triples.append([[build_subject(subject)], [str(root)], [build_object(object)]])
+                                            if obj[1] == root and obj[0] == object:
+                                                triples.append([[build_subject(subject)], [str(root)], build_object(object),build_metadata(object)])
 
                         elif len(list(findLefts(doc1,root)))>0:
 
@@ -228,11 +281,11 @@ for root in list_roots:
                                     break
 
                             if list(findLefts(doc1,root))[0].dep_ in ('prep','agent'):
-                                triples.append([[build_subject(subject)], [str(root) +' ' + str(list(findLefts(doc1,root))[0])], [build_object(object)]])
+                                triples.append([[build_subject(subject)], [str(root) +' ' + str(list(findLefts(doc1,root))[0])], build_object(object),build_metadata(object)])
                             else:
                                 for obj in list_objects:
                                     if obj[1] == root and obj[0].orth_ == object .orth_:
-                                        triples.append([[build_subject(subject)], [str(root)], [build_object(object)]])
+                                        triples.append([[build_subject(subject)], [str(root)], build_object(object),build_metadata(object)])
 
 
 
@@ -248,10 +301,11 @@ for root in list_roots:
                                         object = word
                                         break
 
-                                triples.append([[build_subject(subject)], [str(root) + ' ' +  str(child_word) + ' ' + str(list(find(doc1,child_word))[0]) ], [build_object(object)]])
+                                triples.append([[build_subject(subject)], [str(root) + ' ' +  str(child_word) + ' ' + str(list(find(doc1,child_word))[0]) ], build_object(object),build_metadata(object)])
 
 
                     if get_dep_by_word(doc1,child_word) == 'prep' and  child_word.orth_ not in ('On', 'on','of'):
+
                         for word in list(find(doc1,child_word)):
                             if word.dep_ == 'pobj':
                                 object = word
@@ -260,11 +314,15 @@ for root in list_roots:
                         for obj in list_objects:
                             if obj[0] != None:
                                 if obj[1] == root and obj[0].orth_ == object.orth_:
-                                    triples.append([[build_subject(subject)], [str(root) + ' ' +  str(child_word)  ], [build_object(object)]])
+                                    neg_words = [word for word in list(root.lefts) if word.dep_ == 'neg']
+                                    if  len(neg_words) > 0:
+                                        triples.append([[build_subject(subject)], [neg_words[0].orth_+ ' ' +str(root) + ' ' +  str(child_word)  ], build_object(object),build_metadata(object)])
+                                    else:
+                                        triples.append([[build_subject(subject)], [str(root) + ' ' +  str(child_word)  ], build_object(object),build_metadata(object)])
 
 
+    ([print(triple) for triple in form_triples(remove_duplicates(triples))])
 
-    print(remove_duplicates(triples))
 
 
 #[to_nltk_tree(sent.root).pretty_print() for sent in doc1.sents]
