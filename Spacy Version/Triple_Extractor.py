@@ -7,7 +7,7 @@ from copy import copy
 import spacy
 from dateutil.parser import parse
 from nltk import Tree
-from spacy.symbols import VERB, NOUN, PRON, ADV
+from spacy.symbols import VERB, NOUN, PRON, ADV, ADJ
 from sutime import sutime, SUTime
 
 from Util import to_nltk_tree, find_roots, get_tag_by_word, get_dep_by_word, get_subtree_of, find_objects, find_verbs, \
@@ -201,7 +201,7 @@ for file in list_:
                                 triples.append([[build_subject(subject)], [str(root) + ' ' +  str(verb)], build_object(object),build_metadata(object),meta_date,[object]])
 
                         if get_dep_by_word(doc1,verb) in ('ROOT') and len([word for word in findLefts(doc1,verb) if word.dep_ == 'nsubjpass'])>0 \
-                                    and len([word for word in find(doc1,verb) if word.dep_ == 'advmod' or word.pos == ADV]) > 0:
+                                    and len([word for word in find(doc1,verb) if word.dep_ == 'advmod' or word.pos == ADV or word.pos == ADJ]) > 0:
 
                             for word in list(verb.subtree):
                                 if word.dep_ == 'pobj':
