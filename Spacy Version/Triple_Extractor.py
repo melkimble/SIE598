@@ -7,7 +7,7 @@ from copy import copy
 import spacy
 from dateutil.parser import parse
 from nltk import Tree
-from spacy.symbols import VERB, NOUN, PRON
+from spacy.symbols import VERB, NOUN, PRON, ADV
 from sutime import sutime, SUTime
 
 from Util import to_nltk_tree, find_roots, get_tag_by_word, get_dep_by_word, get_subtree_of, find_objects, find_verbs, \
@@ -17,6 +17,13 @@ import re
 
 #-----------------------------------------------------------------------------------------------------------------------
 #LOAD THE SENTENCES
+def unique_items(L):
+    found = set()
+    for item in L:
+        if item[1] not in found:
+            yield item
+            found.add(item[1])
+
 
 dir_in = "SENTENCES" # SET DIRECTORY WHERE TXT FILES TO SPLIT ARE LOCATED
 
@@ -43,14 +50,14 @@ for file in list_:
          for line in file:
              list_sentences.append([line[:line.rfind(".") + 1]])
 
-
+    print("START+++++++++++++++++++++++++++++++++++++++++++++" + fbase + "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
     sentences = list_sentences
 
     reference_date = '1939-9-1'
 
     for sent in sentences:
-        sent = sent[0]
+        sent = sent[0].replace('-','')
         #sent = sentences[26]
         meta_date =''
         object = None
@@ -125,7 +132,7 @@ for file in list_:
                 if verb.orth_ == omit_verb:
                     list_verbs.remove(verb)
 
-        list_objects = find_objects(doc1, list_verbs)
+        list_objects = list(unique_items(find_objects(doc1, list_verbs)))
         list_subjects = find_subjects(doc1)
 
         #print('ROOTS',list_roots)
@@ -194,7 +201,7 @@ for file in list_:
                                 triples.append([[build_subject(subject)], [str(root) + ' ' +  str(verb)], build_object(object),build_metadata(object),meta_date,[object]])
 
                         if get_dep_by_word(doc1,verb) in ('ROOT') and len([word for word in findLefts(doc1,verb) if word.dep_ == 'nsubjpass'])>0 \
-                                    and len([word for word in find(doc1,verb) if word.dep_ == 'advmod']) > 0:
+                                    and len([word for word in find(doc1,verb) if word.dep_ == 'advmod' or word.pos == ADV]) > 0:
 
                             for word in list(verb.subtree):
                                 if word.dep_ == 'pobj':
@@ -345,6 +352,12 @@ for file in list_:
                                             object = word
                                             break
 
+                                    if object == None:
+                                        for obj in list_objects:
+                                            if obj[1] == root:
+                                                object = obj[0]
+                                                break
+
                                     if list(find(doc1,root))[0].dep_ in ('prep','agent','prt'):
 
                                         neg_words = [word for word in list(root.lefts) if word.dep_ == 'neg']
@@ -356,7 +369,7 @@ for file in list_:
                                     else:
                                         for obj in list_objects:
 
-                                            if object!= None and obj[1] == root and obj[0].orth_ == object.orth_:
+                                            if object!= None and obj[1] != None and  obj[0] != None  and obj[1] == root and obj[0].orth_ == object.orth_:
                                                 triples.append([[build_subject(subject)], [str(root)], build_object(object),build_metadata(object),meta_date,[object]])
                                             elif obj[1] == root: #newly added 5/5/2019
                                                 triples.append([[build_subject(subject)], [str(root)], build_object(obj[0]),build_metadata(obj[0]),meta_date,[obj[0]]])
@@ -403,6 +416,8 @@ for file in list_:
                                             if word.dep_ == 'pobj':
                                                 object = word
                                                 break
+
+                                        triples.append([[build_subject(subject)], [str(root) + ' ' +  str(child_word) + ' ' + str(list(find(doc1,child_word))[0]) ], build_object(object),build_metadata(object)])
 
 
 
