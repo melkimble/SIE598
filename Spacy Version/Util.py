@@ -1,9 +1,6 @@
-import sys
-from datetime import datetime, timedelta
 from itertools import chain
-import re
+
 import nltk
-from dateutil import parser
 from nltk.corpus import wordnet as wn
 
 def count_children(tree,node_index):
@@ -117,98 +114,23 @@ def get_subtree_of(doc,w):
             return word.subtree
 
 def find_objects(doc,a):
-    #print(a)
     list_objects = []
     for possible_object in doc:
-        #print(possible_object,possible_object.pos_,possible_object)
-        if possible_object.dep == (pobj) and possible_object.head.pos == ADP  and possible_object.head.head  in a and possible_object.orth_ not in ('time','Time') and possible_object.head.orth_ not in ('After','Before'):
-            list_objects.append([possible_object,possible_object.head.head])
-        if possible_object.dep == (dobj) and possible_object.head.pos == VERB and possible_object.head.dep_ in ('ccomp','xcomp') and possible_object.head.head  in a and possible_object.orth_ not in ('time','Time'):
-            list_objects.append([possible_object,possible_object.head.head])
-        if possible_object.dep == (dobj) and possible_object.head.pos == VERB and possible_object.head.dep_ in ('xcomp') and possible_object.head.head  in a and possible_object.orth_ not in ('time','Time'):
+        if possible_object.dep in (dobj,pobj) and possible_object.head.pos in (VERB, ADP) and possible_object.head  in a  and possible_object.head.orth_ not in ('in','In'):
             list_objects.append([possible_object,possible_object.head])
-        if possible_object.dep == (dobj) and possible_object.head.pos == VERB  and possible_object.head  in a  and possible_object.head.orth_ not in ('in','In'):
-            list_objects.append([possible_object,possible_object.head])
-        if possible_object.dep == (dobj) and possible_object.head.pos == VERB and possible_object.head.head.pos == VERB and possible_object.head.head.dep_ != 'xcomp' and possible_object.head.dep_ != 'advcl'  \
-                and possible_object.head  in a  and possible_object.head.orth_ not in ('in','In'):
-            if list(possible_object.head.head.rights)[0].dep_ != 'dobj':
-                list_objects.append([possible_object,possible_object.head.head])
-
-
-    #cleanup objects
-
-    for obj in list_objects:
-        closest_obj =None
-        verb = obj[1]
-        for word in list(verb.rights):
-            for inner_word in list(word.rights):
-                if closest_obj == None:
-                    if inner_word.dep_ == 'pobj':
-                        closest_obj = inner_word
-                        break
-
-        #for obj_ in list_objects:
-            #if obj_[0] != None and obj_[1] == verb and obj_[0] != obj[0] and obj_[0].dep_ == 'pobj':
-                #get closest pobj to the verb
-                #if closest_obj != obj_[0]:
-                    #obj_[0] = None
-
-
-    for obj in list_objects:
-        closest_obj =None
-        verb = obj[1]
-        for word in list(verb.rights):
-
-            if closest_obj == None:
-                if word.dep_ == 'dobj':
-                    closest_obj = word
-                    break
-
-
-        for obj_ in list_objects:
-            if obj_[0] != None  and closest_obj != None and obj_[1] == verb and obj_[0] != obj[0] and obj_[0].dep_ != 'dobj':
-                #get closest pobj to the verb
-                if closest_obj != obj_[0]:
-                    obj_[0] = None
-
-
-        for obj in list_objects:
-            closest_obj =None
-            verb = obj[1]
-            for word in list(verb.rights):
-
-                if closest_obj == None:
-                    if word.dep_ == 'pobj':
-                        closest_obj = word
-                        break
-
-
-            for obj_ in list_objects:
-                if obj_[0] != None  and closest_obj != None and obj_[1] == verb and obj_[0] != obj[0] and obj_[0].dep_ != 'pobj':
-                    #get closest pobj to the verb
-                    if closest_obj != obj_[0]:
-                        obj_[0] = None
-
-    for obj in list_objects:
-        if obj[0] == None or obj[0].dep_ == 'npadvmod':
-
-            list_objects.remove(obj)
-
-
-
     return list_objects
 
 
 def find_subjects(doc):
     list_subject = []
     for possible_subject in doc:
-        #print(possible_subject,possible_subject.dep_,possible_subject.pos_)
-        if possible_subject.dep in (nsubj,nsubjpass) and possible_subject.head.pos == VERB and possible_subject.pos in (PROPN, NOUN, PRON, ADV,X):
+        if possible_subject.dep in (nsubj,nsubjpass) and possible_subject.head.pos == VERB and possible_subject.pos in (PROPN, NOUN, PRON, ADV):
             list_subject.append([possible_subject,possible_subject.head])
 
     return list_subject
 
 def find(doc,w):
+    list_subject = []
     for p in doc:
         if p == w:
             return p.rights
@@ -223,138 +145,6 @@ def remove_duplicates(triples_):
     try:
         return list(triples for triples,_ in itertools.groupby(triples_))
     except:
-        print (sys.exc_info())
         return triples_
-
-def form_triples(triples_):
-
-    triples_new = []
-    for item in triples_:
-        i=0
-        S=' '
-        P=' '
-        O=' '
-        M=' '
-        D=' '
-
-        for inner_item in item: #SPO
-            i+=1
-            if inner_item != None:
-                for inner_inner_item in inner_item:
-                    if inner_inner_item != None and type(inner_inner_item) == list:
-                        for inner_inner_inner_item in inner_inner_item:
-                            if i==1:
-                                S +=' ' + str(inner_inner_inner_item)
-                            if i==2:
-                                P +=' ' +  str(inner_inner_inner_item)
-                            if i==3:
-                                O +=' ' +  str(inner_inner_inner_item)
-                            if i==4:
-                                O +=' ' +  str(inner_inner_inner_item)
-                            if i==5:
-                                D +=' ' +  str(inner_inner_inner_item)
-                    else:
-                        if i==1:
-                                S +=' ' +  str(inner_inner_item)
-                        if i==2:
-                                P +=' ' +  str(inner_inner_item)
-                        if i==3:
-                                O +=' ' +  str(inner_inner_item)
-                        if i==4:
-                                M += str(inner_inner_item)
-                        if i==5:
-                                D += str(inner_inner_item)
-
-        triple_new = [re.sub(' +', ' ', S),re.sub(' +', ' ', P),re.sub(' +', ' ', O),re.sub(' +', ' ', M),re.sub(' +', ' ', D)]
-
-        triples_new.append(triple_new)
-
-
-    return [a for i, a in enumerate(triples_new) if not any(all(c in h for c in a) for h in triples_new[:i])]
-
-def build_object(obj):
-    children=[]
-    try:
-        if(len(list(obj.lefts))>0 and not (len(list(obj.lefts))==1 and list(obj.lefts)[0].pos in (DET,CCONJ) )):
-            children = list(obj.lefts)
-            children.append(obj)
-        elif (len(list(obj.rights))>0):
-            if len([word for word in list(obj.subtree) if word.orth_ in ('in','In')])==0:
-                [children .append(word) for word in list(obj.subtree)]
-            elif len([word for word in list(obj.subtree) if word.pos != VERB])==0:
-                children.append(obj)
-                [children .append(word) for word in list(obj.rights)]
-            else:
-                children.append(obj)
-        else:
-            children.append(obj)
-
-
-
-    except :
-        children.append(obj)
-
-    for child in children:
-        if type(child) != type(object) and child != None and child.pos in (DET,CCONJ):
-            children.remove(child)
-
-   # print(children)
-    return children
-
-def build_metadata(obj):
-
-    children=[]
-    try:
-        if (len(list(obj.subtree))>0):
-
-            if obj.head.dep_ not in ('conj','advcl'):
-                ([children.append(word) for word in list(obj.subtree)])
-
-            else:
-                [children.append(word) for word in list(obj.head.subtree) ]
-    except :
-        children.append(None)
-
-    for child in children:
-        if type(child) != type(object) and child != None  and child.pos  in (DET,PUNCT) :
-
-            children.remove(child)
-
-    if len(children) == 1:
-        children=[None]
-
-    return ' '.join([child.orth_ for child in children if child != None])
-
-def build_subject(subj):
-    children=[]
-
-    try:
-        if(len(list(subj.lefts))>0):
-            children = list(subj.lefts)
-        elif (len(list(subj.rights))>0):
-            children = list(subj.rights)
-
-        children.append(subj)
-    except :
-        children.append(subj)
-
-    for child in children:
-        if type(child) != type(object) and child != None and child.pos in (DET,CCONJ):
-            children.remove(child)
-
-   # print(children)
-    return children
-
-def last_day_of_month(date):
-    if date.month == 12:
-        return date.replace(day=31)
-    return date.replace(month=date.month+1, day=1) - timedelta(days=1)
-
-def cleanup(date):
-    try:
-        yield parser.parse(date, dayfirst=False)
-    except (ValueError, TypeError) as e:
-        print('')
-        #print("Exception {} on unhandled date {}".format(e, date))
 
 

@@ -319,4 +319,3 @@ for i in range(len(list_sentences)):
         print (triple)
 
     #break #DEBUG
-
